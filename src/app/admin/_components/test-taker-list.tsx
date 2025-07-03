@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ClipboardCopy, PlusCircle, Send } from 'lucide-react';
+import { ClipboardCopy, PlusCircle, Send, Loader2 } from 'lucide-react';
 import type { TestTaker } from '@/lib/types';
 import { createTestSessionAction, addTestTakerAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -17,16 +17,35 @@ export function TestTakerList({ initialTestTakers }: { initialTestTakers: TestTa
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [generatedLink, setGeneratedLink] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
 
-  const handleAddTaker = async (formData: FormData) => {
-    await addTestTakerAction(formData);
-    setAddDialogOpen(false);
-    toast({
-      title: 'Success!',
-      description: 'New test taker has been added.',
-      className: 'bg-accent text-accent-foreground',
-    });
+  const handleAddTakerSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!formRef.current) return;
+    
+    setIsSubmitting(true);
+    const formData = new FormData(formRef.current);
+    
+    try {
+      await addTestTakerAction(formData);
+      setAddDialogOpen(false);
+      formRef.current.reset();
+      toast({
+        title: 'Success!',
+        description: 'New test taker has been added.',
+        className: 'bg-accent text-accent-foreground',
+      });
+    } catch (error) {
+       toast({
+        title: 'Error',
+        description: 'Something went wrong while adding the test taker.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleGenerateLink = async (takerId: string) => {
@@ -49,21 +68,27 @@ export function TestTakerList({ initialTestTakers }: { initialTestTakers: TestTa
             <CardTitle>Test Takers</CardTitle>
             <CardDescription>Manage users and send them test links.</CardDescription>
           </div>
-          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+          <Dialog open={addDialogOpen} onOpenChange={(isOpen) => {
+              if (isSubmitting) return;
+              setAddDialogOpen(isOpen);
+          }}>
             <DialogTrigger asChild>
               <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Taker</Button>
             </DialogTrigger>
             <DialogContent>
-              <form action={handleAddTaker}>
+              <form ref={formRef} onSubmit={handleAddTakerSubmit}>
                 <DialogHeader>
                   <DialogTitle>Add Test Taker</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                  <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" name="name" required /></div>
-                  <div className="grid gap-2"><Label htmlFor="email">Email</Label><Input id="email" name="email" type="email" required/></div>
+                  <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" name="name" required disabled={isSubmitting} /></div>
+                  <div className="grid gap-2"><Label htmlFor="email">Email</Label><Input id="email" name="email" type="email" required disabled={isSubmitting}/></div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Add Taker</Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Add Taker
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
