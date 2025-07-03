@@ -1,8 +1,21 @@
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { TestTube2 } from 'lucide-react';
+import { cookies } from 'next/headers';
+import { logoutAction } from '@/app/login/actions';
+
+function LogoutButton() {
+  return (
+    <form action={logoutAction}>
+      <Button type="submit" variant="ghost">Logout</Button>
+    </form>
+  );
+}
 
 export default function Header() {
+  const cookieStore = cookies();
+  const isAdminAuthenticated = cookieStore.has('admin-password');
+
   return (
     <header className="bg-card border-b sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -17,6 +30,7 @@ export default function Header() {
           <Button variant="ghost" asChild>
             <Link href="/admin">Admin</Link>
           </Button>
+          {isAdminAuthenticated && <LogoutButton />}
         </nav>
       </div>
     </header>

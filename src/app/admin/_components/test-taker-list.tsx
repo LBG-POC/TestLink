@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ClipboardCopy, PlusCircle, Send, Loader2 } from 'lucide-react';
+import { ClipboardCopy, PlusCircle, Send, Loader2, FileText } from 'lucide-react';
 import type { TestTaker } from '@/lib/types';
 import { createTestSessionAction, addTestTakerAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -101,6 +102,7 @@ export function TestTakerList({ initialTestTakers }: { initialTestTakers: TestTa
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Score</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -112,10 +114,19 @@ export function TestTakerList({ initialTestTakers }: { initialTestTakers: TestTa
                   <TableCell>
                     <Badge variant={taker.testStatus === 'Completed' ? 'default' : 'secondary'} className={taker.testStatus === 'Completed' ? 'bg-accent' : ''}>{taker.testStatus}</Badge>
                   </TableCell>
+                  <TableCell>{taker.score !== null && taker.score !== undefined ? `${taker.score}%` : 'N/A'}</TableCell>
                   <TableCell className="text-right">
-                    <Button size="sm" onClick={() => handleGenerateLink(taker.id)} disabled={taker.testStatus === 'Completed'}>
-                      <Send className="mr-2 h-4 w-4" /> Generate Link
-                    </Button>
+                    {taker.testStatus === 'Completed' && taker.testSessionId ? (
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={`/results/${taker.testSessionId}`}>
+                          <FileText className="mr-2 h-4 w-4" /> View Results
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button size="sm" onClick={() => handleGenerateLink(taker.id)} disabled={taker.testStatus === 'Completed'}>
+                        <Send className="mr-2 h-4 w-4" /> Generate Link
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

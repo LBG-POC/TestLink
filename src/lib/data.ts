@@ -48,8 +48,16 @@ export async function removeQuestion(id: string): Promise<void> {
 
 // --- Test Taker Management ---
 export async function getTestTakers(): Promise<TestTaker[]> {
-  return testTakers;
+  // Enhance test takers with their score from the session
+  return testTakers.map(taker => {
+    const session = testSessions.find(s => s.id === taker.testSessionId);
+    return {
+      ...taker,
+      score: session ? session.score : null
+    };
+  });
 }
+
 
 export async function addTestTaker(taker: Omit<TestTaker, 'id' | 'testSessionId' | 'testStatus'>): Promise<TestTaker> {
   const newTaker: TestTaker = { ...taker, id: crypto.randomUUID(), testSessionId: null, testStatus: 'Not Started' };

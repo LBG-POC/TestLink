@@ -12,6 +12,7 @@ export type TestTaker = {
   email: string;
   testSessionId: string | null;
   testStatus: 'Not Started' | 'Completed';
+  score?: number | null;
 };
 
 export type UserAnswer = {
