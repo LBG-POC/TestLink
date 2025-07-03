@@ -10,18 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ClipboardCopy, PlusCircle, Send } from 'lucide-react';
 import type { TestTaker } from '@/lib/types';
-import { createTestSessionAction } from '@/app/actions';
+import { createTestSessionAction, addTestTakerAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { addTestTaker } from '@/lib/data';
-import { revalidatePath } from 'next/cache';
-
-async function addTestTakerAction(formData: FormData) {
-  'use server'
-  const name = formData.get('name') as string;
-  const email = formData.get('email') as string;
-  await addTestTaker({ name, email });
-  revalidatePath('/admin');
-}
 
 export function TestTakerList({ initialTestTakers }: { initialTestTakers: TestTaker[] }) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);

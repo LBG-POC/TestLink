@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { addQuestion as dbAddQuestion, removeQuestion as dbRemoveQuestion, getQuestions, createTestSession as dbCreateTestSession, completeTestSession as dbCompleteTestSession } from '@/lib/data';
+import { addQuestion as dbAddQuestion, removeQuestion as dbRemoveQuestion, getQuestions, createTestSession as dbCreateTestSession, completeTestSession as dbCompleteTestSession, addTestTaker } from '@/lib/data';
 import type { Question, UserAnswer } from '@/lib/types';
 import { aiScoreEssay } from '@/ai/flows/ai-score-essay';
 
@@ -73,4 +73,11 @@ export async function submitTestAction(sessionId: string, answers: UserAnswer[])
   await dbCompleteTestSession(sessionId, answers, score, aiFeedback);
   
   redirect(`/results/${sessionId}`);
+}
+
+export async function addTestTakerAction(formData: FormData) {
+  const name = formData.get('name') as string;
+  const email = formData.get('email') as string;
+  await addTestTaker({ name, email });
+  revalidatePath('/admin');
 }
