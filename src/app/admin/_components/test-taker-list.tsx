@@ -15,7 +15,7 @@ import type { TestTaker, QuestionBank } from '@/lib/types';
 import { createTestSessionAction, addTestTakerAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 
-export function TestTakerList({ initialTestTakers, questionBanks = [] }: { initialTestTakers: TestTaker[], questionBanks: QuestionBank[] }) {
+export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { initialTestTakers: TestTaker[], questionBanks: QuestionBank[] }) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [generateLinkDialogOpen, setGenerateLinkDialogOpen] = useState(false);

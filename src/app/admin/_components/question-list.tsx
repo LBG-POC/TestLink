@@ -14,7 +14,7 @@ import type { Question, QuestionBank } from '@/lib/types';
 import { addQuestionAction, removeQuestionAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 
-export function QuestionList({ initialQuestions, questionBanks = [] }: { initialQuestions: Question[], questionBanks: QuestionBank[] }) {
+export function QuestionList({ initialQuestions = [], questionBanks = [] }: { initialQuestions: Question[], questionBanks: QuestionBank[] }) {
   const [open, setOpen] = useState(false);
   const [questionType, setQuestionType] = useState<'multiple-choice' | 'open-ended'>('multiple-choice');
   const { toast } = useToast();

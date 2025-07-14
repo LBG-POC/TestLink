@@ -55,6 +55,13 @@ declare global {
 
 const db = globalThis.db ?? dbSingleton();
 
+// Ensure all parts of the db object are initialized as arrays.
+db.questions = db.questions ?? [];
+db.questionBanks = db.questionBanks ?? [];
+db.testTakers = db.testTakers ?? [];
+db.testSessions = db.testSessions ?? [];
+
+
 if (process.env.NODE_ENV !== 'production') {
   globalThis.db = db;
 }
