@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useActionState } from 'react';
 import Link from 'next/link';
+import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,10 +11,20 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ClipboardCopy, PlusCircle, Send, Loader2, FileText, AlertTriangle } from 'lucide-react';
+import { ClipboardCopy, PlusCircle, Send, Loader2, FileText } from 'lucide-react';
 import type { TestTaker, QuestionBank } from '@/lib/types';
 import { createTestSessionAction, addTestTakerAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
+
+function AddTakerSubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" disabled={pending}>
+      {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+      Add Taker
+    </Button>
+  );
+}
 
 export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { initialTestTakers: TestTaker[], questionBanks: QuestionBank[] }) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -21,37 +32,21 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
   const [generateLinkDialogOpen, setGenerateLinkDialogOpen] = useState(false);
   const [selectedTakerId, setSelectedTakerId] = useState<string | null>(null);
   const [generatedLink, setGeneratedLink] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const addTakerFormRef = useRef<HTMLFormElement>(null);
-  const generateLinkFormRef = useRef<HTMLFormElement>(null);
+  
   const { toast } = useToast();
 
-  const handleAddTakerSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!addTakerFormRef.current) return;
-    
-    setIsSubmitting(true);
-    const formData = new FormData(addTakerFormRef.current);
-    
-    try {
-      await addTestTakerAction(formData);
-      setAddDialogOpen(false);
-      addTakerFormRef.current.reset();
-      toast({
+  const handleAddTakerAction = async (prevState: any, formData: FormData) => {
+    await addTestTakerAction(formData);
+    setAddDialogOpen(false);
+    toast({
         title: 'Success!',
         description: 'New test taker has been added.',
         className: 'bg-accent text-accent-foreground',
-      });
-    } catch (error) {
-       toast({
-        title: 'Error',
-        description: 'Something went wrong while adding the test taker.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
+    return { message: 'success' };
   };
+
+  const [state, formAction] = useActionState(handleAddTakerAction, { message: '' });
 
   const handleOpenGenerateLinkDialog = (takerId: string) => {
     if (!questionBanks || questionBanks.length === 0) {
@@ -68,9 +63,9 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
 
   const handleGenerateLink = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedTakerId || !generateLinkFormRef.current) return;
+    if (!selectedTakerId) return;
     
-    const formData = new FormData(generateLinkFormRef.current);
+    const formData = new FormData(e.currentTarget);
     const questionBankId = formData.get('questionBankId') as string;
 
     const result = await createTestSessionAction(selectedTakerId, questionBankId);
@@ -103,27 +98,21 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
             <CardTitle>Test Takers</CardTitle>
             <CardDescription>Manage users and send them test links.</CardDescription>
           </div>
-          <Dialog open={addDialogOpen} onOpenChange={(isOpen) => {
-              if (isSubmitting) return;
-              setAddDialogOpen(isOpen);
-          }}>
+          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
             <DialogTrigger asChild>
               <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Taker</Button>
             </DialogTrigger>
             <DialogContent>
-              <form ref={addTakerFormRef} onSubmit={handleAddTakerSubmit}>
+              <form action={formAction}>
                 <DialogHeader>
                   <DialogTitle>Add Test Taker</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                  <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" name="name" required disabled={isSubmitting} /></div>
-                  <div className="grid gap-2"><Label htmlFor="email">Email</Label><Input id="email" name="email" type="email" required disabled={isSubmitting}/></div>
+                  <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" name="name" required /></div>
+                  <div className="grid gap-2"><Label htmlFor="email">Email</Label><Input id="email" name="email" type="email" required /></div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Add Taker
-                  </Button>
+                  <AddTakerSubmitButton />
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -189,7 +178,7 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
 
       <Dialog open={generateLinkDialogOpen} onOpenChange={setGenerateLinkDialogOpen}>
         <DialogContent>
-           <form ref={generateLinkFormRef} onSubmit={handleGenerateLink}>
+           <form onSubmit={handleGenerateLink}>
             <DialogHeader>
                 <DialogTitle>Generate Test Link</DialogTitle>
                 <DialogDescription>Select a question bank to generate a test link for this user.</DialogDescription>
