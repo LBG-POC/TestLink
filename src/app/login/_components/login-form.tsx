@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -8,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { loginAction } from '../actions';
 import { Loader2 } from 'lucide-react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useFormStatus } from 'react';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -44,7 +43,7 @@ export function LoginForm() {
     return result;
   };
   
-  const [state, formAction] = useFormState(clientLoginAction, initialState);
+  const [state, formAction] = useActionState(clientLoginAction, initialState);
 
   return (
     <Card className="w-full max-w-sm">
