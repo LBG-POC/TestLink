@@ -12,7 +12,7 @@ import type { QuestionBank } from '@/lib/types';
 import { addQuestionBankAction, removeQuestionBankAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 
-export function QuestionBankList({ initialQuestionBanks }: { initialQuestionBanks: QuestionBank[] }) {
+export function QuestionBankList({ initialQuestionBanks = [] }: { initialQuestionBanks: QuestionBank[] }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
