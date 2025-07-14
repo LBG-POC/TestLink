@@ -1,5 +1,11 @@
+export type QuestionBank = {
+  id: string;
+  name: string;
+}
+
 export type Question = {
   id: string;
+  questionBankId: string;
   text: string;
   type: 'multiple-choice' | 'open-ended';
   options?: string[];

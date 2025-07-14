@@ -9,14 +9,17 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ClipboardCopy, PlusCircle, Send, Loader2, FileText } from 'lucide-react';
-import type { TestTaker } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ClipboardCopy, PlusCircle, Send, Loader2, FileText, AlertTriangle } from 'lucide-react';
+import type { TestTaker, QuestionBank } from '@/lib/types';
 import { createTestSessionAction, addTestTakerAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 
-export function TestTakerList({ initialTestTakers }: { initialTestTakers: TestTaker[] }) {
+export function TestTakerList({ initialTestTakers, questionBanks }: { initialTestTakers: TestTaker[], questionBanks: QuestionBank[] }) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [generateLinkDialogOpen, setGenerateLinkDialogOpen] = useState(false);
+  const [selectedTakerId, setSelectedTakerId] = useState<string | null>(null);
   const [generatedLink, setGeneratedLink] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -49,10 +52,27 @@ export function TestTakerList({ initialTestTakers }: { initialTestTakers: TestTa
     }
   };
 
-  const handleGenerateLink = async (takerId: string) => {
-    const session = await createTestSessionAction(takerId);
+  const handleOpenGenerateLinkDialog = (takerId: string) => {
+    if (questionBanks.length === 0) {
+      toast({
+        title: 'Cannot Generate Link',
+        description: 'You must create at least one question bank before generating a test link.',
+        variant: 'destructive'
+      })
+      return;
+    }
+    setSelectedTakerId(takerId);
+    setGenerateLinkDialogOpen(true);
+  }
+
+  const handleGenerateLink = async (formData: FormData) => {
+    if (!selectedTakerId) return;
+    const questionBankId = formData.get('questionBankId') as string;
+
+    const session = await createTestSessionAction(selectedTakerId, questionBankId);
     const link = `${window.location.origin}/test/${session.id}`;
     setGeneratedLink(link);
+    setGenerateLinkDialogOpen(false);
     setLinkDialogOpen(true);
   };
   
@@ -123,7 +143,7 @@ export function TestTakerList({ initialTestTakers }: { initialTestTakers: TestTa
                         </Link>
                       </Button>
                     ) : (
-                      <Button size="sm" onClick={() => handleGenerateLink(taker.id)} disabled={taker.testStatus === 'Completed'}>
+                      <Button size="sm" onClick={() => handleOpenGenerateLinkDialog(taker.id)} disabled={taker.testStatus === 'Completed'}>
                         <Send className="mr-2 h-4 w-4" /> Generate Link
                       </Button>
                     )}
@@ -150,6 +170,36 @@ export function TestTakerList({ initialTestTakers }: { initialTestTakers: TestTa
           <DialogFooter className="mt-4">
             <Button onClick={() => setLinkDialogOpen(false)}>Done</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={generateLinkDialogOpen} onOpenChange={setGenerateLinkDialogOpen}>
+        <DialogContent>
+           <form action={handleGenerateLink}>
+            <DialogHeader>
+                <DialogTitle>Generate Test Link</DialogTitle>
+                <DialogDescription>Select a question bank to generate a test link for this user.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                   <Label htmlFor="questionBankId">Question Bank</Label>
+                   <Select name="questionBankId" required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a bank" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {questionBanks.map(bank => (
+                            <SelectItem key={bank.id} value={bank.id}>{bank.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                </div>
+              </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setGenerateLinkDialogOpen(false)}>Cancel</Button>
+                <Button type="submit">Generate</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </>

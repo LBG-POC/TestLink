@@ -10,11 +10,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import type { Question } from '@/lib/types';
+import type { Question, QuestionBank } from '@/lib/types';
 import { addQuestionAction, removeQuestionAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 
-export function QuestionList({ initialQuestions }: { initialQuestions: Question[] }) {
+export function QuestionList({ initialQuestions, questionBanks }: { initialQuestions: Question[], questionBanks: QuestionBank[] }) {
   const [open, setOpen] = useState(false);
   const [questionType, setQuestionType] = useState<'multiple-choice' | 'open-ended'>('multiple-choice');
   const { toast } = useToast();
@@ -37,6 +37,10 @@ export function QuestionList({ initialQuestions }: { initialQuestions: Question[
     });
   };
 
+  const getBankName = (bankId: string) => {
+    return questionBanks.find(b => b.id === bankId)?.name || 'Uncategorized';
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -55,6 +59,19 @@ export function QuestionList({ initialQuestions }: { initialQuestions: Question[
                 <DialogDescription>Fill in the details for the new question.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                   <Label htmlFor="questionBankId">Question Bank</Label>
+                   <Select name="questionBankId" required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a bank" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {questionBanks.map(bank => (
+                            <SelectItem key={bank.id} value={bank.id}>{bank.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                </div>
                 <div className="grid gap-2">
                   <Label htmlFor="text">Question Text</Label>
                   <Input id="text" name="text" required />
@@ -107,6 +124,7 @@ export function QuestionList({ initialQuestions }: { initialQuestions: Question[
             <TableRow>
               <TableHead>Question</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Bank</TableHead>
               <TableHead>Time Limit</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -116,6 +134,7 @@ export function QuestionList({ initialQuestions }: { initialQuestions: Question[
               <TableRow key={q.id}>
                 <TableCell className="font-medium max-w-lg truncate">{q.text}</TableCell>
                 <TableCell><Badge variant="secondary">{q.type}</Badge></TableCell>
+                <TableCell><Badge variant="outline">{getBankName(q.questionBankId)}</Badge></TableCell>
                  <TableCell>{q.timeLimit ? `${q.timeLimit}s` : 'N/A'}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon" onClick={() => handleRemoveQuestion(q.id)}>
@@ -124,7 +143,7 @@ export function QuestionList({ initialQuestions }: { initialQuestions: Question[
                 </TableCell>
               </TableRow>
             )) : (
-              <TableRow><TableCell colSpan={4} className="text-center">No questions found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center">No questions found.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>

@@ -2,7 +2,17 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { addQuestion as dbAddQuestion, removeQuestion as dbRemoveQuestion, getQuestions, createTestSession as dbCreateTestSession, completeTestSession as dbCompleteTestSession, addTestTaker } from '@/lib/data';
+import { 
+  addQuestion as dbAddQuestion, 
+  removeQuestion as dbRemoveQuestion, 
+  getQuestions, 
+  createTestSession as dbCreateTestSession, 
+  completeTestSession as dbCompleteTestSession, 
+  addTestTaker as dbAddTestTaker,
+  addQuestionBank as dbAddQuestionBank,
+  removeQuestionBank as dbRemoveQuestionBank,
+  getTestSession
+} from '@/lib/data';
 import type { Question, UserAnswer } from '@/lib/types';
 import { aiScoreEssay } from '@/ai/flows/ai-score-essay';
 
@@ -10,8 +20,9 @@ export async function addQuestionAction(formData: FormData) {
   const text = formData.get('text') as string;
   const type = formData.get('type') as 'multiple-choice' | 'open-ended';
   const timeLimit = formData.get('timeLimit') ? Number(formData.get('timeLimit')) : undefined;
+  const questionBankId = formData.get('questionBankId') as string;
   
-  const questionData: Omit<Question, 'id'> = { text, type, timeLimit };
+  const questionData: Omit<Question, 'id'> = { text, type, timeLimit, questionBankId };
 
   if (type === 'multiple-choice') {
     questionData.options = [
@@ -32,20 +43,33 @@ export async function removeQuestionAction(id: string) {
   revalidatePath('/admin');
 }
 
-export async function createTestSessionAction(testTakerId: string) {
-  const session = await dbCreateTestSession(testTakerId);
+export async function addQuestionBankAction(formData: FormData) {
+  const name = formData.get('name') as string;
+  await dbAddQuestionBank({ name });
+  revalidatePath('/admin');
+}
+
+export async function removeQuestionBankAction(id: string) {
+  await dbRemoveQuestionBank(id);
+  revalidatePath('/admin');
+}
+
+export async function createTestSessionAction(testTakerId: string, questionBankId: string) {
+  const session = await dbCreateTestSession(testTakerId, questionBankId);
   revalidatePath('/admin');
   return session;
 }
 
 
 export async function submitTestAction(sessionId: string, answers: UserAnswer[]) {
-  const questions = await getQuestions();
+  const session = await getTestSession(sessionId);
+  if (!session) throw new Error('Session not found during submission.');
+
   let correctAnswers = 0;
   const aiFeedback: Record<string, string> = {};
 
   for (const userAnswer of answers) {
-    const question = questions.find(q => q.id === userAnswer.questionId);
+    const question = session.questions.find(q => q.id === userAnswer.questionId);
     if (!question) continue;
 
     if (question.type === 'multiple-choice') {
@@ -68,7 +92,7 @@ export async function submitTestAction(sessionId: string, answers: UserAnswer[])
     }
   }
 
-  const totalQuestions = questions.length;
+  const totalQuestions = session.questions.length;
   const score = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
 
   await dbCompleteTestSession(sessionId, answers, score, aiFeedback);
@@ -79,6 +103,6 @@ export async function submitTestAction(sessionId: string, answers: UserAnswer[])
 export async function addTestTakerAction(formData: FormData) {
   const name = formData.get('name') as string;
   const email = formData.get('email') as string;
-  await addTestTaker({ name, email });
+  await dbAddTestTaker({ name, email });
   revalidatePath('/admin');
 }

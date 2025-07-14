@@ -36,5 +36,19 @@ export default async function TestPage({ params }: { params: { id: string } }) {
     );
   }
 
+  if (session.questions.length === 0) {
+     return (
+      <Card className="max-w-md mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><AlertTriangle className="text-destructive"/> No Questions Found</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>This test cannot be started because the assigned question bank has no questions.</p>
+           <Button asChild className="mt-4"><Link href="/admin">Return to Admin</Link></Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return <TestInterface session={session} />;
 }
