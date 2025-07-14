@@ -9,8 +9,9 @@ import { aiScoreEssay } from '@/ai/flows/ai-score-essay';
 export async function addQuestionAction(formData: FormData) {
   const text = formData.get('text') as string;
   const type = formData.get('type') as 'multiple-choice' | 'open-ended';
+  const timeLimit = formData.get('timeLimit') ? Number(formData.get('timeLimit')) : undefined;
   
-  const questionData: Omit<Question, 'id'> = { text, type };
+  const questionData: Omit<Question, 'id'> = { text, type, timeLimit };
 
   if (type === 'multiple-choice') {
     questionData.options = [

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { type TestSession, type UserAnswer } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,15 +9,44 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { submitTestAction } from '@/app/actions';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Timer } from 'lucide-react';
 
 export function TestInterface({ session }: { session: TestSession }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<UserAnswer[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  
   const currentQuestion = session.questions[currentQuestionIndex];
+  const [timeLeft, setTimeLeft] = useState(currentQuestion.timeLimit || null);
+
   const progress = Math.round(((currentQuestionIndex + 1) / session.questions.length) * 100);
+
+  const goToNextQuestion = useCallback(() => {
+    if (currentQuestionIndex < session.questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      handleSubmit();
+    }
+  }, [currentQuestionIndex, session.questions.length]);
+
+  useEffect(() => {
+    const newQuestion = session.questions[currentQuestionIndex];
+    setTimeLeft(newQuestion.timeLimit || null);
+  }, [currentQuestionIndex, session.questions]);
+
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0) {
+      if(timeLeft === 0) goToNextQuestion();
+      return;
+    };
+    
+    const timer = setInterval(() => {
+      setTimeLeft(prevTime => (prevTime ? prevTime - 1 : null));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, goToNextQuestion]);
+
 
   const handleAnswerChange = (questionId: string, answer: string) => {
     setAnswers((prev) => {
@@ -39,9 +68,17 @@ export function TestInterface({ session }: { session: TestSession }) {
   return (
     <Card className="max-w-3xl mx-auto">
       <CardHeader>
-        <div className="mb-4">
-          <Label>Question {currentQuestionIndex + 1} of {session.questions.length}</Label>
-          <Progress value={progress} className="mt-2" />
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <Label>Question {currentQuestionIndex + 1} of {session.questions.length}</Label>
+            <Progress value={progress} className="mt-2" />
+          </div>
+          {timeLeft !== null && (
+            <div className="flex items-center gap-2 text-lg font-semibold text-primary/90 p-2 rounded-md bg-primary/10">
+              <Timer className="h-6 w-6" />
+              <span>{timeLeft}s</span>
+            </div>
+          )}
         </div>
         <CardTitle className="text-2xl">{currentQuestion.text}</CardTitle>
         {currentQuestion.type === 'multiple-choice' && (
@@ -79,7 +116,7 @@ export function TestInterface({ session }: { session: TestSession }) {
           Previous
         </Button>
         {currentQuestionIndex < session.questions.length - 1 ? (
-          <Button onClick={() => setCurrentQuestionIndex(prev => prev + 1)}>
+          <Button onClick={goToNextQuestion}>
             Next
           </Button>
         ) : (

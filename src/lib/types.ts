@@ -4,6 +4,7 @@ export type Question = {
   type: 'multiple-choice' | 'open-ended';
   options?: string[];
   answer?: string; // For multiple-choice, this is the text of the correct option
+  timeLimit?: number; // Time limit in seconds
 };
 
 export type TestTaker = {

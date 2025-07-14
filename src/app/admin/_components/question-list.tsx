@@ -59,18 +59,25 @@ export function QuestionList({ initialQuestions }: { initialQuestions: Question[
                   <Label htmlFor="text">Question Text</Label>
                   <Input id="text" name="text" required />
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="type">Question Type</Label>
-                  <Select name="type" required value={questionType} onValueChange={(v) => setQuestionType(v as any)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
-                      <SelectItem value="open-ended">Open-ended</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="type">Question Type</Label>
+                    <Select name="type" required value={questionType} onValueChange={(v) => setQuestionType(v as any)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
+                        <SelectItem value="open-ended">Open-ended</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                   <div className="grid gap-2">
+                    <Label htmlFor="timeLimit">Time Limit (seconds)</Label>
+                    <Input id="timeLimit" name="timeLimit" type="number" placeholder="e.g., 60" />
+                  </div>
                 </div>
+
                 {questionType === 'multiple-choice' && (
                   <>
                     <div className="grid grid-cols-2 gap-4">
@@ -100,6 +107,7 @@ export function QuestionList({ initialQuestions }: { initialQuestions: Question[
             <TableRow>
               <TableHead>Question</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Time Limit</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -108,6 +116,7 @@ export function QuestionList({ initialQuestions }: { initialQuestions: Question[
               <TableRow key={q.id}>
                 <TableCell className="font-medium max-w-lg truncate">{q.text}</TableCell>
                 <TableCell><Badge variant="secondary">{q.type}</Badge></TableCell>
+                 <TableCell>{q.timeLimit ? `${q.timeLimit}s` : 'N/A'}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon" onClick={() => handleRemoveQuestion(q.id)}>
                     <Trash2 className="h-4 w-4" />
@@ -115,7 +124,7 @@ export function QuestionList({ initialQuestions }: { initialQuestions: Question[
                 </TableCell>
               </TableRow>
             )) : (
-              <TableRow><TableCell colSpan={3} className="text-center">No questions found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center">No questions found.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>

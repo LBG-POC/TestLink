@@ -18,11 +18,13 @@ const dbSingleton = (): Db => {
         type: 'multiple-choice',
         options: ['London', 'Berlin', 'Paris', 'Madrid'],
         answer: 'Paris',
+        timeLimit: 30,
       },
       {
         id: 'q2',
         text: 'Explain the theory of relativity in your own words.',
         type: 'open-ended',
+        timeLimit: 180,
       },
       {
         id: 'q3',
@@ -30,6 +32,7 @@ const dbSingleton = (): Db => {
         type: 'multiple-choice',
         options: ['3', '4', '5', '6'],
         answer: '4',
+        timeLimit: 15,
       }
     ],
     testTakers: [
