@@ -22,20 +22,21 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
   const [selectedTakerId, setSelectedTakerId] = useState<string | null>(null);
   const [generatedLink, setGeneratedLink] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
+  const addTakerFormRef = useRef<HTMLFormElement>(null);
+  const generateLinkFormRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
 
   const handleAddTakerSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formRef.current) return;
+    if (!addTakerFormRef.current) return;
     
     setIsSubmitting(true);
-    const formData = new FormData(formRef.current);
+    const formData = new FormData(addTakerFormRef.current);
     
     try {
       await addTestTakerAction(formData);
       setAddDialogOpen(false);
-      formRef.current.reset();
+      addTakerFormRef.current.reset();
       toast({
         title: 'Success!',
         description: 'New test taker has been added.',
@@ -53,7 +54,7 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
   };
 
   const handleOpenGenerateLinkDialog = (takerId: string) => {
-    if (questionBanks.length === 0) {
+    if (!questionBanks || questionBanks.length === 0) {
       toast({
         title: 'Cannot Generate Link',
         description: 'You must create at least one question bank before generating a test link.',
@@ -65,15 +66,31 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
     setGenerateLinkDialogOpen(true);
   }
 
-  const handleGenerateLink = async (formData: FormData) => {
-    if (!selectedTakerId) return;
+  const handleGenerateLink = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedTakerId || !generateLinkFormRef.current) return;
+    
+    const formData = new FormData(generateLinkFormRef.current);
     const questionBankId = formData.get('questionBankId') as string;
 
-    const session = await createTestSessionAction(selectedTakerId, questionBankId);
-    const link = `${window.location.origin}/test/${session.id}`;
-    setGeneratedLink(link);
-    setGenerateLinkDialogOpen(false);
-    setLinkDialogOpen(true);
+    try {
+      const session = await createTestSessionAction(selectedTakerId, questionBankId);
+      if (session && session.id) {
+        const link = `${window.location.origin}/test/${session.id}`;
+        setGeneratedLink(link);
+        setGenerateLinkDialogOpen(false);
+        setLinkDialogOpen(true);
+      } else {
+        throw new Error("Failed to create test session.");
+      }
+    } catch(error: any) {
+        toast({
+            title: 'Error Generating Link',
+            description: error.message || 'Could not create a test session. Ensure the question bank has questions.',
+            variant: 'destructive'
+        });
+        setGenerateLinkDialogOpen(false);
+    }
   };
   
   const copyToClipboard = () => {
@@ -97,7 +114,7 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
               <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Taker</Button>
             </DialogTrigger>
             <DialogContent>
-              <form ref={formRef} onSubmit={handleAddTakerSubmit}>
+              <form ref={addTakerFormRef} onSubmit={handleAddTakerSubmit}>
                 <DialogHeader>
                   <DialogTitle>Add Test Taker</DialogTitle>
                 </DialogHeader>
@@ -175,7 +192,7 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
 
       <Dialog open={generateLinkDialogOpen} onOpenChange={setGenerateLinkDialogOpen}>
         <DialogContent>
-           <form action={handleGenerateLink}>
+           <form ref={generateLinkFormRef} onSubmit={handleGenerateLink}>
             <DialogHeader>
                 <DialogTitle>Generate Test Link</DialogTitle>
                 <DialogDescription>Select a question bank to generate a test link for this user.</DialogDescription>
@@ -188,7 +205,7 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
                         <SelectValue placeholder="Select a bank" />
                       </SelectTrigger>
                       <SelectContent>
-                        {questionBanks.map(bank => (
+                        {(questionBanks || []).map(bank => (
                             <SelectItem key={bank.id} value={bank.id}>{bank.name}</SelectItem>
                         ))}
                       </SelectContent>
@@ -196,7 +213,7 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
                 </div>
               </div>
             <DialogFooter>
-                <Button variant="outline" onClick={() => setGenerateLinkDialogOpen(false)}>Cancel</Button>
+                <Button variant="outline" type="button" onClick={() => setGenerateLinkDialogOpen(false)}>Cancel</Button>
                 <Button type="submit">Generate</Button>
             </DialogFooter>
           </form>
