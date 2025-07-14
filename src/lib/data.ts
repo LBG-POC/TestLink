@@ -55,7 +55,7 @@ declare global {
 
 const db = globalThis.db ?? dbSingleton();
 
-// Ensure all parts of the db object are initialized as arrays.
+// Ensure all parts of the db object are initialized as arrays, even after hot reloads.
 db.questions = db.questions ?? [];
 db.questionBanks = db.questionBanks ?? [];
 db.testTakers = db.testTakers ?? [];
