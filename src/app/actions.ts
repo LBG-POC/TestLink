@@ -55,9 +55,14 @@ export async function removeQuestionBankAction(id: string) {
 }
 
 export async function createTestSessionAction(testTakerId: string, questionBankId: string) {
-  const session = await dbCreateTestSession(testTakerId, questionBankId);
-  revalidatePath('/admin');
-  return session;
+  try {
+    const session = await dbCreateTestSession(testTakerId, questionBankId);
+    revalidatePath('/admin');
+    return session;
+  } catch (error: any) {
+    // We are returning the error message to the client so it can be displayed in a toast.
+    return { error: error.message };
+  }
 }
 
 

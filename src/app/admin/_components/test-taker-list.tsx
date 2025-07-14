@@ -73,23 +73,20 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
     const formData = new FormData(generateLinkFormRef.current);
     const questionBankId = formData.get('questionBankId') as string;
 
-    try {
-      const session = await createTestSessionAction(selectedTakerId, questionBankId);
-      if (session && session.id) {
-        const link = `${window.location.origin}/test/${session.id}`;
-        setGeneratedLink(link);
-        setGenerateLinkDialogOpen(false);
-        setLinkDialogOpen(true);
-      } else {
-        throw new Error("Failed to create test session.");
-      }
-    } catch(error: any) {
-        toast({
-            title: 'Error Generating Link',
-            description: error.message || 'Could not create a test session. Ensure the question bank has questions.',
-            variant: 'destructive'
-        });
-        setGenerateLinkDialogOpen(false);
+    const result = await createTestSessionAction(selectedTakerId, questionBankId);
+      
+    if (result && 'id' in result) {
+      const link = `${window.location.origin}/test/${result.id}`;
+      setGeneratedLink(link);
+      setGenerateLinkDialogOpen(false);
+      setLinkDialogOpen(true);
+    } else {
+      toast({
+          title: 'Error Generating Link',
+          description: (result && 'error' in result && result.error) || 'Could not create a test session.',
+          variant: 'destructive'
+      });
+      setGenerateLinkDialogOpen(false);
     }
   };
   
