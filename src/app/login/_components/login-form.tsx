@@ -20,18 +20,37 @@ export function LoginForm() {
     e.preventDefault();
     setIsLoading(true);
 
-    const result = await loginAction(password);
+    try {
+      const result = await loginAction(password);
 
-    if (result.success) {
-      toast({ title: 'Login successful!' });
-      router.push('/admin');
-      router.refresh(); 
-    } else {
-      toast({
-        title: 'Login failed',
-        description: 'Incorrect password.',
-        variant: 'destructive',
-      });
+      if (!result.success) {
+        toast({
+          title: 'Login failed',
+          description: result.message || 'Incorrect password.',
+          variant: 'destructive',
+        });
+      }
+      // On success, the server action will redirect, and this part of the code
+      // will not be reached because the component unmounts.
+    } catch (error) {
+       // A redirect error from Next.js might be caught here on the client.
+       // We can safely ignore it as the browser will follow the redirect.
+       // For other errors, we should show a message.
+       if (error && typeof error === 'object' && 'digest' in error && (error as any).digest?.startsWith('NEXT_REDIRECT')) {
+         // This is a redirect error, we can ignore it.
+         toast({ title: 'Login successful! Redirecting...' });
+         // The router refresh ensures the client is in sync with the server's state
+         router.refresh();
+       } else {
+         toast({
+          title: 'An error occurred',
+          description: 'Please try again later.',
+          variant: 'destructive',
+        });
+       }
+    } finally {
+      // In case of failure or non-redirect error, stop loading.
+      // On success, the component will unmount, so this won't be called.
       setIsLoading(false);
     }
   };
