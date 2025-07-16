@@ -60,7 +60,6 @@ export async function createTestSessionAction(testTakerId: string, questionBankI
     revalidatePath('/admin');
     return session;
   } catch (error: any) {
-    // We are returning the error message to the client so it can be displayed in a toast.
     return { error: error.message };
   }
 }
@@ -84,8 +83,6 @@ export async function submitTestAction(sessionId: string, answers: UserAnswer[])
     } else if (question.type === 'open-ended') {
       try {
         const result = await aiScoreEssay({ subject: question.text, essay: userAnswer.answer });
-        // AI score is out of 100, let's say it counts as one question.
-        // A score of 70+ is considered "correct" for calculation purposes.
         if(result.score >= 70) {
             correctAnswers++;
         }
