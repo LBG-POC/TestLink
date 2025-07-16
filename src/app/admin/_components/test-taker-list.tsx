@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useActionState } from 'react';
+import { useReducer, useActionState } from 'react';
 import Link from 'next/link';
 import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -27,12 +27,12 @@ function AddTakerSubmitButton() {
 }
 
 export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { initialTestTakers: TestTaker[], questionBanks: QuestionBank[] }) {
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  const [generateLinkDialogOpen, setGenerateLinkDialogOpen] = useState(false);
-  const [selectedTakerId, setSelectedTakerId] = useState<string | null>(null);
-  const [generatedLink, setGeneratedLink] = useState('');
-  
+  const [selectedTakerId, setSelectedTakerId] = useReducer((_state: any, payload: string | null) => payload, null);
+  const [addDialogOpen, setAddDialogOpen] = useReducer((_state: any, payload: boolean) => payload, false);
+  const [generateLinkDialogOpen, setGenerateLinkDialogOpen] = useReducer((_state: any, payload: boolean) => payload, false);
+  const [linkDialogOpen, setLinkDialogOpen] = useReducer((_state: any, payload: boolean) => payload, false);
+  const [generatedLink, setGeneratedLink] = useReducer((_state: any, payload: string) => payload, '');
+
   const { toast } = useToast();
 
   const handleAddTakerAction = async (prevState: any, formData: FormData) => {
@@ -46,7 +46,7 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
     return { message: 'success' };
   };
 
-  const [state, formAction] = useActionState(handleAddTakerAction, { message: '' });
+  const [addTakerState, addTakerFormAction] = useActionState(handleAddTakerAction, { message: '' });
 
   const handleOpenGenerateLinkDialog = (takerId: string) => {
     if (!questionBanks || questionBanks.length === 0) {
@@ -61,10 +61,10 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
     setGenerateLinkDialogOpen(true);
   }
 
-  const handleGenerateLink = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleGenerateLinkSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedTakerId) return;
-    
+
     const formData = new FormData(e.currentTarget);
     const questionBankId = formData.get('questionBankId') as string;
 
@@ -103,7 +103,7 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
               <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Taker</Button>
             </DialogTrigger>
             <DialogContent>
-              <form action={formAction}>
+              <form action={addTakerFormAction}>
                 <DialogHeader>
                   <DialogTitle>Add Test Taker</DialogTitle>
                 </DialogHeader>
@@ -112,6 +112,7 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
                   <div className="grid gap-2"><Label htmlFor="email">Email</Label><Input id="email" name="email" type="email" required /></div>
                 </div>
                 <DialogFooter>
+                   <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
                   <AddTakerSubmitButton />
                 </DialogFooter>
               </form>
@@ -130,7 +131,7 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
               </TableRow>
             </TableHeader>
             <TableBody>
-              {initialTestTakers.map((taker) => (
+              {(initialTestTakers || []).map((taker) => (
                 <TableRow key={taker.id}>
                   <TableCell className="font-medium">{taker.name}</TableCell>
                   <TableCell>{taker.email}</TableCell>
@@ -171,14 +172,14 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
             </Button>
           </div>
           <DialogFooter className="mt-4">
-            <Button onClick={() => setLinkDialogOpen(false)}>Done</Button>
+             <DialogClose asChild><Button type="button">Done</Button></DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={generateLinkDialogOpen} onOpenChange={setGenerateLinkDialogOpen}>
         <DialogContent>
-           <form onSubmit={handleGenerateLink}>
+           <form onSubmit={handleGenerateLinkSubmit}>
             <DialogHeader>
                 <DialogTitle>Generate Test Link</DialogTitle>
                 <DialogDescription>Select a question bank to generate a test link for this user.</DialogDescription>
@@ -199,7 +200,7 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
                 </div>
               </div>
             <DialogFooter>
-                <Button variant="outline" type="button" onClick={() => setGenerateLinkDialogOpen(false)}>Cancel</Button>
+                <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
                 <Button type="submit">Generate</Button>
             </DialogFooter>
           </form>
