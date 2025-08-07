@@ -86,8 +86,12 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
   };
   
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(generatedLink);
-    toast({ title: 'Copied to clipboard!' });
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(generatedLink);
+      toast({ title: 'Copied to clipboard!' });
+    } else {
+      console.error('Clipboard API not available.');
+    }
   };
 
   return (
@@ -107,10 +111,10 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
                 <DialogHeader>
                   <DialogTitle>Add Test Taker</DialogTitle>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" name="name" required /></div>
-                  <div className="grid gap-2"><Label htmlFor="email">Email</Label><Input id="email" name="email" type="email" required /></div>
-                </div>
+                <div className="grid gap-4 py-4"></div>
+                <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" name="name" required /></div>
+                <div className="grid gap-2"><Label htmlFor="mobile">Mobile Number</Label><Input id="mobile" name="mobile" type="text" pattern="^\d{10}$" title="Please enter exactly 10 digits" required /></div>
+ {/* <div className="grid gap-2"><Label htmlFor="mobile">Mobile Number</Label><Input id="mobile" name="mobile" type="text" pattern="^\d{10}$" title="Please enter exactly 10 digits" required /></div> */}
                 <DialogFooter>
                    <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
                   <AddTakerSubmitButton />
@@ -124,17 +128,17 @@ export function TestTakerList({ initialTestTakers = [], questionBanks = [] }: { 
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead>Mobile Number</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Score</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+             <TableBody>
               {(initialTestTakers || []).map((taker) => (
                 <TableRow key={taker.id}>
                   <TableCell className="font-medium">{taker.name}</TableCell>
-                  <TableCell>{taker.email}</TableCell>
+ <TableCell>{taker.mobile}</TableCell>
                   <TableCell>
                     <Badge variant={taker.testStatus === 'Completed' ? 'default' : 'secondary'} className={taker.testStatus === 'Completed' ? 'bg-accent' : ''}>{taker.testStatus}</Badge>
                   </TableCell>

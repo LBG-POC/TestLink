@@ -16,7 +16,7 @@ export type Question = {
 export type TestTaker = {
   id: string;
   name: string;
-  email: string;
+  mobile: string;
   testSessionId: string | null;
   testStatus: 'Not Started' | 'Completed';
   score?: number | null;

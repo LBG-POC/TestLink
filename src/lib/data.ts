@@ -1,130 +1,109 @@
 'use server';
 
+import { db } from '@/lib/firebase';
+import { collection, getDocs, addDoc, doc, deleteDoc, query, where, getDoc, updateDoc } from 'firebase/firestore';
 import type { Question, QuestionBank, TestTaker, TestSession, UserAnswer } from './types';
 
-// In-memory store that persists across hot-reloads in development
-type Db = {
-  questions: Question[];
-  testTakers: TestTaker[];
-  testSessions: TestSession[];
-  questionBanks: QuestionBank[];
-};
-
-const dbSingleton = (): Db => {
-  return {
-    questionBanks: [
-      { id: 'qb1', name: 'General Knowledge' },
-    ],
-    questions: [
-      {
-        id: 'q1',
-        questionBankId: 'qb1',
-        text: 'What is the capital of France?',
-        type: 'multiple-choice',
-        options: ['London', 'Berlin', 'Paris', 'Madrid'],
-        answer: 'Paris',
-        timeLimit: 30,
-      },
-      {
-        id: 'q2',
-        questionBankId: 'qb1',
-        text: 'Explain the theory of relativity in your own words.',
-        type: 'open-ended',
-        timeLimit: 180,
-      },
-      {
-        id: 'q3',
-        questionBankId: 'qb1',
-        text: 'What is 2 + 2?',
-        type: 'multiple-choice',
-        options: ['3', '4', '5', '6'],
-        answer: '4',
-        timeLimit: 15,
-      }
-    ],
-    testTakers: [
-      { id: 'u1', name: 'Alice Smith', email: 'alice@example.com', testSessionId: null, testStatus: 'Not Started' }
-    ],
-    testSessions: [],
-  };
-};
-
-declare global {
-  var db: undefined | Db;
-}
-
-const db = globalThis.db ?? dbSingleton();
-
-// Ensure all parts of the db object are initialized as arrays, even after hot reloads.
-db.questions = db.questions ?? [];
-db.questionBanks = db.questionBanks ?? [];
-db.testTakers = db.testTakers ?? [];
-db.testSessions = db.testSessions ?? [];
-
-
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.db = db;
-}
+const questionBanksCollection = collection(db, 'questionBanks');
+const questionsCollection = collection(db, 'questions');
+const testTakersCollection = collection(db, 'testTakers');
+const testSessionsCollection = collection(db, 'testSessions');
 
 
 // --- Question Bank Management ---
 export async function getQuestionBanks(): Promise<QuestionBank[]> {
-  return db.questionBanks;
+  console.log('getQuestionBanks called');
+  const snapshot = await getDocs(questionBanksCollection);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as QuestionBank[];
 }
 
 export async function addQuestionBank(bank: Omit<QuestionBank, 'id'>): Promise<QuestionBank> {
-  const newBank: QuestionBank = { ...bank, id: crypto.randomUUID() };
-  db.questionBanks.push(newBank);
-  return newBank;
+  const docRef = await addDoc(questionBanksCollection, bank);
+  return { id: docRef.id, ...bank };
 }
 
 export async function removeQuestionBank(id: string): Promise<void> {
-  db.questionBanks = db.questionBanks.filter(qb => qb.id !== id);
+  await deleteDoc(doc(questionBanksCollection, id));
   // Also remove questions associated with this bank
-  db.questions = db.questions.filter(q => q.questionBankId !== id);
+  const questionsQuery = query(questionsCollection, where('questionBankId', '==', id));
+  const questionsSnapshot = await getDocs(questionsQuery);
+  const deleteQuestionPromises = questionsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+  await Promise.all(deleteQuestionPromises);
 }
 
 
 // --- Question Management ---
 export async function getQuestions(): Promise<Question[]> {
-  return db.questions;
+  console.log('getQuestions called');
+  const snapshot = await getDocs(questionsCollection);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Question[];
 }
 
 export async function addQuestion(question: Omit<Question, 'id'>): Promise<Question> {
-  const newQuestion: Question = { ...question, id: crypto.randomUUID() };
-  db.questions.push(newQuestion);
-  return newQuestion;
+  const docRef = await addDoc(questionsCollection, question);
+  return { id: docRef.id, ...question };
 }
 
 export async function removeQuestion(id: string): Promise<void> {
-  db.questions = db.questions.filter(q => q.id !== id);
+  await deleteDoc(doc(questionsCollection, id));
+}
+
+export async function updateQuestion(id: string, updatedQuestionData: Omit<Question, 'id'>): Promise<void> {
+  const questionDocRef = doc(questionsCollection, id);
+  try {
+    await updateDoc(questionDocRef, updatedQuestionData);
+  } catch (error) {
+    console.error("Error updating question:", error);
+    throw error;
+  }
 }
 
 // --- Test Taker Management ---
 export async function getTestTakers(): Promise<TestTaker[]> {
-  // Enhance test takers with their score from the session
-  return db.testTakers.map(taker => {
-    const session = db.testSessions.find(s => s.id === taker.testSessionId);
-    return {
-      ...taker,
-      score: session ? session.score : null
+  console.log('getTestTakers called');
+  const takersSnapshot = await getDocs(testTakersCollection);
+  const testTakers: TestTaker[] = [];
+  for (const takerDoc of takersSnapshot.docs) {
+    const takerData = takerDoc.data() as TestTaker;
+    let score: number | null = null;
+    if (takerData.testSessionId) {
+      const sessionDoc = await getDoc(doc(testSessionsCollection, takerData.testSessionId));
+      if (sessionDoc.exists()) {
+        score = (sessionDoc.data() as TestSession).score;
+      }
+    }
+    const testTakerWithScore: TestTaker & { score: number | null } = {
+      id: takerDoc.id,
+      name: takerData.name,
+      mobile: takerData.mobile,
+      testSessionId: takerData.testSessionId,
+      testStatus: takerData.testStatus,
+      score,
     };
-  });
+    testTakers.push(testTakerWithScore);
+  }
+  return testTakers;
 }
 
 
 export async function addTestTaker(taker: Omit<TestTaker, 'id' | 'testSessionId' | 'testStatus'>): Promise<TestTaker> {
-  const newTaker: TestTaker = { ...taker, id: crypto.randomUUID(), testSessionId: null, testStatus: 'Not Started' };
-  db.testTakers.push(newTaker);
-  return newTaker;
+  console.log('addTestTaker called with:', taker);
+  const newTakerData = { ...taker, testSessionId: null, testStatus: 'Not Started' };
+  const docRef = await addDoc(testTakersCollection, newTakerData);
+  return { id: docRef.id, ...newTakerData };
 }
 
 // --- Test Session Management ---
 export async function createTestSession(testTakerId: string, questionBankId: string): Promise<TestSession> {
-    const testTaker = db.testTakers.find(t => t.id === testTakerId);
+    console.log('createTestSession called with:', { testTakerId, questionBankId });
+
+    const testTakerDoc = await getDoc(doc(testTakersCollection, testTakerId));
+    const testTaker = testTakerDoc.data() as TestTaker | undefined;
     if (!testTaker) throw new Error('Test taker not found');
-    
-    const questionsFromBank = db.questions.filter(q => q.questionBankId === questionBankId);
+
+    const questionsQuery = query(questionsCollection, where('questionBankId', '==', questionBankId));
+    const questionsSnapshot = await getDocs(questionsQuery);
+    const questionsFromBank = questionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Question[];
     if (questionsFromBank.length === 0) throw new Error('Selected question bank has no questions.');
 
     const newSession: TestSession = {
@@ -138,44 +117,31 @@ export async function createTestSession(testTakerId: string, questionBankId: str
         startedAt: Date.now(),
         completedAt: null
     };
-    db.testSessions.push(newSession);
+    const sessionDocRef = await addDoc(testSessionsCollection, newSession);
+    const sessionId = sessionDocRef.id;
 
     // Update the test taker record
-    testTaker.testSessionId = newSession.id;
-    testTaker.testStatus = 'Not Started';
+    await updateDoc(testTakerDoc.ref, {
+      testSessionId: sessionId,
+      testStatus: 'Not Started'
+    });
 
-    return newSession;
+    console.log('Test session created:', { sessionId, newSession });
+
+    return { id: sessionId, ...newSession };
 }
 
 export async function getTestSession(sessionId: string): Promise<TestSession | undefined> {
-    const session = db.testSessions.find(s => s.id === sessionId);
-    if (!session) return undefined;
-    
-    // Make sure session has questions. If questions were deleted after session was created, it might be empty.
-    if (session.questions.length === 0) {
-      const bankIdForSession = db.questions.find(q => session.answers.some(a => a.questionId === q.id))?.questionBankId;
-      if (bankIdForSession) {
-        session.questions = db.questions.filter(q => q.questionBankId === bankIdForSession);
-      }
-    }
-    
-    return session;
+    const sessionDoc = await getDoc(doc(testSessionsCollection, sessionId));
+    if (!sessionDoc.exists()) return undefined;
+    return { id: sessionDoc.id, ...sessionDoc.data() } as TestSession;
 }
 
 export async function completeTestSession(sessionId: string, answers: UserAnswer[], score: number, aiFeedback: Record<string,string>): Promise<TestSession> {
-    const session = db.testSessions.find(s => s.id === sessionId);
-    if (!session) throw new Error('Session not found');
-
-    session.answers = answers;
-    session.score = score;
-    session.aiFeedback = aiFeedback;
-    session.status = 'Completed';
-    session.completedAt = Date.now();
-
-    const testTaker = db.testTakers.find(t => t.id === session.testTakerId);
-    if (testTaker) {
-        testTaker.testStatus = 'Completed';
-    }
-
-    return session;
+    const sessionDocRef = doc(testSessionsCollection, sessionId);
+    await updateDoc(sessionDocRef, {
+        answers, score, aiFeedback, status: 'Completed', completedAt: Date.now()
+    });
+    const sessionDoc = await getDoc(sessionDocRef);
+    return { id: sessionDoc.id, ...sessionDoc.data() } as TestSession;
 }
